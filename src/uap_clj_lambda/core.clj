@@ -3,11 +3,11 @@
   (:require [uswitch.lambada.core :refer [deflambdafn]]
             [clojure.data.json :as json :refer [read write]]
             [clojure.java.io :as io :refer [reader writer]]
-            [uap-clj.core :refer [lookup-useragent]]))
+            [uap-clj.core :refer [useragent]]))
 
 (defn handle-event
   [event]
-  (lookup-useragent (get-in event ["useragent"])))
+  (useragent (get-in event ["useragent"])))
 
 (deflambdafn uap-clj-lambda.core.SimpleUseragentLookup
   [in out _]
