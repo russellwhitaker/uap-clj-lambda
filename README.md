@@ -14,7 +14,7 @@ The testrunner is [`speclj`](http://speclj.com).
 Event handler output
 - Looks up a useragent string and emits browser, device, and o/s information
 
-Finished in 0.06960 seconds
+Finished in 0.02981 seconds
 1 examples, 0 failures
 ```
 
@@ -30,9 +30,9 @@ Java(TM) SE Runtime Environment (build 1.7.0_51-b13)
 Java HotSpot(TM) 64-Bit Server VM (build 24.51-b03, mixed mode)
 
 → java -version
-java version "1.8.0_66"
-Java(TM) SE Runtime Environment (build 1.8.0_66-b17)
-Java HotSpot(TM) 64-Bit Server VM (build 25.66-b17, mixed mode)
+java version "1.8.0_102"
+Java(TM) SE Runtime Environment (build 1.8.0_102-b14)
+Java HotSpot(TM) 64-Bit Server VM (build 25.102-b14, mixed mode)
 ```
 
 ## Operational deployment
@@ -42,7 +42,7 @@ Java HotSpot(TM) 64-Bit Server VM (build 25.66-b17, mixed mode)
 ```bash
 → lein clean && lein uberjar
 Compiling uap-clj-lambda.core
-Created /Users/<username>/dev/uap-clj-lambda/target/uap-clj-lambda-0.1.0.jar
+Created /Users/<username>/dev/uap-clj-lambda/target/uap-clj-lambda-0.2.0.jar
 Created /Users/<username>/dev/uap-clj-lambda/target/simple-useragent-lambda.jar
 ```
 
@@ -59,7 +59,7 @@ using the `aws` CLI (select `--timeout` and `--memory-size` according to your ne
     --runtime java8 \
     --timeout 60 \
     --memory-size 512 \
-    --description "Looks up a single useragent string and outputs browser, device, and o/s info"
+    --description "Look up a single useragent string and outputs browser, device, and o/s info"
 ```
 
 A successful `create-function` will emit something like this:
@@ -76,7 +76,7 @@ A successful `create-function` will emit something like this:
     "LastModified": "2015-10-28T21:11:49.589+0000",
     "Handler": "uap-clj-lambda.core.SimpleUseragentLookup",
     "Runtime": "java8",
-    "Description": "Looks up a single useragent string and outputs browser, device, and o/s info"
+    "Description": "Look up a single useragent string and outputs browser, device, and o/s info"
 }
 ```
 
@@ -119,7 +119,7 @@ __Maintained by Russell Whitaker__
 
 The MIT License (MIT)
 
-Copyright (c) 2015 Russell Whitaker
+Copyright (c) 2015-2016 Russell Whitaker
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
