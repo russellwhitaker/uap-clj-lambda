@@ -3,7 +3,7 @@
   (:require [speclj.core :refer [context describe it should==]]
             [clojure.java.io :as io :refer [reader]]
             [cheshire.core :as json :refer [parse-stream]]
-            [uap-clj-lambda.core :refer [handle-event lookup]]))
+            [uap-clj-lambda.core :refer [handle-event]]))
 
 (def ua "Lenovo-A288t_TD/S100 Linux/2.6.35 Android/2.3.5 Release/02.29.2012 Browser/AppleWebkit533.1 Mobile Safari/533.1 FlyFlow/1.4")
 
