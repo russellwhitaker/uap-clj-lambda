@@ -1,4 +1,4 @@
-(defproject uap-clj-lambda "0.2.0"
+(defproject uap-clj-lambda "1.0.0"
   :description "Amazon AWS Lambda function wrapper around uap-clj"
   :url "https://github.com/russellwhitaker/uap-clj-lambda"
   :license {:name "The MIT License (MIT)"
@@ -7,7 +7,8 @@
         :url "https://github.com/russellwhitaker/uap-clj-lambda"}
   :dependencies [[org.clojure/clojure   "1.8.0"]
                  [uap-clj               "1.3.1"]
-                 [org.clojure/data.json "0.2.6"]
+                 [cheshire              "5.6.3"]
+                 [com.taoensso/timbre   "4.8.0"]
                  [uswitch/lambada       "0.1.2"]]
   :profiles {:dev {:resource-paths ["dev-resources"]
                    :dependencies [[speclj "3.3.2"]]
@@ -17,4 +18,6 @@
                        :uberjar-exclusions
                          [#"dev_resources|^test$|test_resources|docs|\.md|LICENSE|META-INF"]}}
   :plugins [[speclj       "3.3.2"]
-            [lein-ancient "0.6.10"]])
+            [lein-ancient "0.6.10"]]
+  :aliases {"test"  ["do" ["clean"] ["spec" "--reporter=d"]]
+            "build" ["do" ["clean"] ["uberjar"]]})

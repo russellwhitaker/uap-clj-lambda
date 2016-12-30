@@ -6,16 +6,25 @@ An Apache AWS Lambda wrapper around the [`uap-clj`](https://github.com/russellwh
 
 ### Running the test suite
 
-The testrunner is [`speclj`](http://speclj.com).
+The testrunner is [`speclj`](http://speclj.com), `lein` aliased:
 
 ```bash
-→ lein clean && lein spec --reporter=d
+→ lein test
 
-Event handler output
-- Looks up a useragent string and emits browser, device, and o/s information
+event handling
+  single full lookup
+  - takes a useragent string and returns browser, device, and o/s fields
+  single browser lookup
+  - takes a useragent string and returns browser fields
+  single device lookup
+  - takes a useragent string and returns device fields
+  single o/s lookup
+  - takes a useragent string and returns o/s fields
+  multiple mixed lookup
+  - handles multiple mixed queries in one payload
 
-Finished in 0.02981 seconds
-1 examples, 0 failures
+Finished in 0.04076 seconds
+5 examples, 0 failures
 ```
 
 ### Java version dependencies
@@ -40,14 +49,13 @@ Java HotSpot(TM) 64-Bit Server VM (build 25.102-b14, mixed mode)
 ### Deploy uberjar-packaged function to Amazon AWS Lambda
 
 ```bash
-→ lein clean && lein uberjar
+→ lein build
 Compiling uap-clj-lambda.core
-Created /Users/<username>/dev/uap-clj-lambda/target/uap-clj-lambda-0.2.0.jar
-Created /Users/<username>/dev/uap-clj-lambda/target/simple-useragent-lambda.jar
+Created /<pathname>/uap-clj-lambda/target/uap-clj-lambda-1.0.0.jar
+Created /<pathname>/uap-clj-lambda/target/simple-useragent-lambda.jar
 ```
 
-`simple-useragent-lambda.jar` is the uberjar you'll upload to AWS when you create your Lambda function
-using the `aws` CLI (select `--timeout` and `--memory-size` according to your needs):
+`simple-useragent-lambda.jar` is the uberjar you'll upload to AWS when you create your Lambda function using the `aws` CLI (select `--timeout` and `--memory-size` according to your needs):
 
 ```bash
 → aws lambda create-function \
@@ -55,11 +63,11 @@ using the `aws` CLI (select `--timeout` and `--memory-size` according to your ne
     --function-name my-useragent-lookup \
     --zip-file fileb://$(pwd)/target/simple-useragent-lambda.jar \
     --role arn:aws:iam::<amazon_id>:role/<lambda_exec_role> \
-    --handler uap-clj-lambda.core.SimpleUseragentLookup \
+    --handler uap-clj-lambda.core.UseragentLookup \
     --runtime java8 \
     --timeout 60 \
     --memory-size 512 \
-    --description "Look up a single useragent string and outputs browser, device, and o/s info"
+    --description "Look up one or more useragent strings and output all or one of browser, device, and o/s information maps"
 ```
 
 A successful `create-function` will emit something like this:
@@ -67,34 +75,47 @@ A successful `create-function` will emit something like this:
 {
     "CodeSha256": "SOMESHA256ENCODEDSTRING",
     "FunctionName": "my-useragent-lookup",
-    "CodeSize": 4369851,
+    "CodeSize": 20076098,
     "MemorySize": 512,
     "FunctionArn": "arn:aws:lambda:<aws_region>:<amazon_id>:function:my-useragent-lookup",
     "Version": "$LATEST",
     "Role": "arn:aws:iam::<amazon_id>:role/<lambda_exec_role>",
     "Timeout": 60,
-    "LastModified": "2015-10-28T21:11:49.589+0000",
-    "Handler": "uap-clj-lambda.core.SimpleUseragentLookup",
+    "LastModified": "2016-12-30T00:48:43.692+0000",
+    "Handler": "uap-clj-lambda.core.UseragentLookup",
     "Runtime": "java8",
-    "Description": "Look up a single useragent string and outputs browser, device, and o/s info"
+    "Description": "Look up one or more useragent strings and output all or one of browser, device, and o/s information maps"
 }
 ```
 
-You can test with the CLI `invoke` method:
+You can test with the CLI `invoke` method. Since the payload can be cumbersome to escape properly on the commandline, you might create a file `test_payload.json` with contents like:
+
+```json
+{"queries":
+  [{"ua":"Lenovo-A288t_TD/S100 Linux/2.6.35 Android/2.3.5 Release/02.29.2012 Browser/AppleWebkit533.1 Mobile Safari/533.1 FlyFlow/1.4",
+    "lookup":"useragent"},
+   {"ua":"Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.19) Gecko/2010031218 FreeBSD/i386 Firefox/3.0.19,gzip(gfe),gzip(gfe)",
+    "lookup":"browser"},
+   {"ua":"Mozilla/5.0 (Linux; U; Android 4.0.3; en-us; Amaze_4G Build/IML74K) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30",
+    "lookup":"device"},
+   {"ua":"UCWEB/2.0 (Linux; U; Adr 2.3.6; en-US; HUAWEI_Y210-0251) U2/1.0.0 UCBrowser/8.6.0.318 U2/1.0.0 Mobile",
+    "lookup":"os"}]}
+```
+Then invoke the function using the JSON contents of the test payload as input:
 
 ```bash
-→ aws lambda invoke
-    --invocation-type RequestResponse
-    --function-name my-useragent-lookup --region <aws_region>
-    --log-type Tail
-    --payload '{"useragent":"Lenovo-A288t_TD/S100 Linux/2.6.35 Android/2.3.5 Release/02.29.2012 Browser/AppleWebkit533.1 Mobile Safari/533.1 FlyFlow/1.4"}'
+→ aws lambda invoke \
+    --invocation-type RequestResponse \
+    --function-name my-useragent-lookup --region <aws_region> \
+    --log-type Tail \
+    --payload file://test_payload.json \
     output.log
 ```
 
 A successful `invoke` will emit something like this:
 ```json
 {
-    "LogResult": "U1RBUlQgUmVxdWVzdElkOiBjNmMwNjQ4My03ZGI4LTExZTUtODM3NC04OWQyMDc4MWMwMzIgVmVyc2lvbjogJExBVEVTVApFTkQgUmVxdWVzdElkOiBjNmMwNjQ4My03ZGI4LTExZTUtODM3NC04OWQyMDc4MWMwMzIKUkVQT1JUIFJlcXVlc3RJZDogYzZjMDY0ODMtN2RiOC0xMWU1LTgzNzQtODlkMjA3ODFjMDMyCUR1cmF0aW9uOiAxNzQuNzEgbXMJQmlsbGVkIER1cmF0aW9uOiAyMDAgbXMgCU1lbW9yeSBTaXplOiA1MTIgTUIJTWF4IE1lbW9yeSBVc2VkOiA2MSBNQgkK",
+    "LogResult": "U1RBUlQgUmVxdWVzdElkOiAzMDYwYzY1Mi1jZTUxLTExZTYtOTI0Ni1mOTZkZmRjZDNlYTcgVmVyc2lvbjogJExBVEVTVAoxNi0xMi0zMCAwNTozMToxOCBpcC0xMC0yMS0xMDItMTAuZWMyLmludGVybmFsIElORk8gW3VhcC1jbGotbGFtYmRhLmNvcmU6MzddIC0gezpyZXN1bHRzIFt7OnVhICJMZW5vdm8tQTI4OHRfVEQvUzEwMCBMaW51eC8yLjYuMzUgQW5kcm9pZC8yLjMuNSBSZWxlYXNlLzAyLjI5LjIwMTIgQnJvd3Nlci9BcHBsZVdlYmtpdDUzMy4xIE1vYmlsZSBTYWZhcmkvNTMzLjEgRmx5Rmxvdy8xLjQiLCA6YnJvd3NlciB7OmZhbWlseSAiQmFpZHUgRXhwbG9yZXIiLCA6bWFqb3IgIjEiLCA6bWlub3IgIjQiLCA6cGF0Y2ggIiJ9LCA6b3MgezpmYW1pbHkgIkFuZHJvaWQiLCA6bWFqb3IgIjIiLCA6bWlub3IgIjMiLCA6cGF0Y2ggIjUiLCA6cGF0Y2hfbWlub3IgIiJ9LCA6ZGV2aWNlIHs6ZmFtaWx5ICJMZW5vdm8gQTI4OHRfVEQiLCA6YnJhbmQgIkxlbm92byIsIDptb2RlbCAiQTI4OHRfVEQifX0gezpicm93c2VyIHs6ZmFtaWx5ICJGaXJlZm94IiwgOm1ham9yICIzIiwgOm1pbm9yICIwIiwgOnBhdGNoICIxOSJ9LCA6dWEgIk1vemlsbGEvNS4wIChYMTE7IFU7IExpbnV4IGk2ODY7IGVuLVVTOyBydjoxLjkuMC4xOSkgR2Vja28vMjAxMDAzMTIxOCBGcmVlQlNEL2kzODYgRmlyZWZveC8zLjAuMTksZ3ppcChnZmUpLGd6aXAoZ2ZlKSJ9IHs6ZGV2aWNlIHs6ZmFtaWx5ICJIVEMgQW1hemUgNEciLCA6YnJhbmQgIkhUQyIsIDptb2RlbCAiQW1hemUgNEcifSwgOnVhICJNb3ppbGxhLzUuMCAoTGludXg7IFU7IEFuZHJvaWQgNC4wLjM7IGVuLXVzOyBBbWF6ZV80RyBCdWlsZC9JTUw3NEspIEFwcGxlV2ViS2l0LzUzNC4zMCAoS0hUTUwsIGxpa2UgR2Vja28pIFZlcnNpb24vNC4wIE1vYmlsZSBTYWZhcmkvNTM0LjMwIn0gezpvcyB7OmZhbWlseSAiQW5kcm9pZCIsIDptYWpvciAiMiIsIDptaW5vciAiMyIsIDpwYXRjaCAiNiIsIDpwYXRjaF9taW5vciAiIn0sIDp1YSAiVUNXRUIvMi4wIChMaW51eDsgVTsgQWRyIDIuMy42OyBlbi1VUzsgSFVBV0VJX1kyMTAtMDI1MSkgVTIvMS4wLjAgVUNCcm93c2VyLzguNi4wLjMxOCBVMi8xLjAuMCBNb2JpbGUifV19CkVORCBSZXF1ZXN0SWQ6IDMwNjBjNjUyLWNlNTEtMTFlNi05MjQ2LWY5NmRmZGNkM2VhNwpSRVBPUlQgUmVxdWVzdElkOiAzMDYwYzY1Mi1jZTUxLTExZTYtOTI0Ni1mOTZkZmRjZDNlYTcJRHVyYXRpb246IDU0OS45NyBtcwlCaWxsZWQgRHVyYXRpb246IDYwMCBtcyAJTWVtb3J5IFNpemU6IDUxMiBNQglNYXggTWVtb3J5IFVzZWQ6IDEwMCBNQgkK",
     "StatusCode": 200
 }
 ```
@@ -103,13 +124,14 @@ You can have a look at the non-encoded version of the log output in the file you
 
 ```json
 → cat output.log
-{"ua":"Lenovo-A288t_TD\/S100 Linux\/2.6.35 Android\/2.3.5 Release\/02.29.2012 Browser\/AppleWebkit533.1 Mobile Safari\/533.1 FlyFlow\/1.4","browser":{"family":"Baidu Explorer","major":"1","minor":"4","patch":""},"os":{"family":"Android","major":"2","minor":"3","patch":"5","patch_minor":""},"device":{"family":"Lenovo A288t_TD","brand":"Lenovo","model":"A288t_TD"}}
+{"results":[{"ua":"Lenovo-A288t_TD/S100 Linux/2.6.35 Android/2.3.5 Release/02.29.2012 Browser/AppleWebkit533.1 Mobile Safari/533.1 FlyFlow/1.4","browser":{"family":"Baidu Explorer","major":"1","minor":"4","patch":""},"os":{"family":"Android","major":"2","minor":"3","patch":"5","patch_minor":""},"device":{"family":"Lenovo A288t_TD","brand":"Lenovo","model":"A288t_TD"}},{"browser":{"family":"Firefox","major":"3","minor":"0","patch":"19"},"ua":"Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.19) Gecko/2010031218 FreeBSD/i386 Firefox/3.0.19,gzip(gfe),gzip(gfe)"},{"device":{"family":"HTC Amaze 4G","brand":"HTC","model":"Amaze 4G"},"ua":"Mozilla/5.0 (Linux; U; Android 4.0.3; en-us; Amaze_4G Build/IML74K) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30"},{"os":{"family":"Android","major":"2","minor":"3","patch":"6","patch_minor":""},"ua":"UCWEB/2.0 (Linux; U; Adr 2.3.6; en-US; HUAWEI_Y210-0251) U2/1.0.0 UCBrowser/8.6.0.318 U2/1.0.0 Mobile"}]}
 ```
-
 
 ## Future / Enhancements
 
-Next step: add a `uap-clj-lambda.core.MultipleUseragentLookup` batch lookup handler.
+- add hook for AWS SNS notification
+- add dispatch to new memoized versions of [uap-clj](http://github.com/russellwhitaker/uap-clj) functions (`uap-clj` >= v1.3.1)
+- add hook to populate completed queries into AWS ElastiCache for performance improvement on subsequent invocations 
 
 Pull requests will be very happily considered.
 
